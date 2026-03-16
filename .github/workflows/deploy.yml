@@ -1,4 +1,4 @@
-name: Build and Push to AWS ECR
+name: Build, Push to ECR and Deploy to ECS
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  build-and-push:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -34,4 +34,13 @@ jobs:
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-          echo "Image pushed: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          echo "IMAGE_URI=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
+
+      - name: Deploy to ECS Fargate
+        run: |
+          aws ecs update-service \
+            --cluster python-ecr-cluster \
+            --service python-ecr-service \
+            --force-new-deployment \
+            --region ap-south-1
+          echo "Deployment triggered on ECS Fargate"
